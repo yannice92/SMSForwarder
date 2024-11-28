@@ -19,8 +19,6 @@ import java.net.URL;
 
 public class SmsReceiver extends BroadcastReceiver {
     private static final String PREFS_NAME = "TelegramConfig";
-    private static final String TELEGRAM_BOT_TOKEN = "7883265099:AAHNV0B04e-R0FIqdY7kST9RupOQj78zMss"; // Ganti dengan token bot Anda
-    private static final String TELEGRAM_CHAT_ID = "459377060"; // Ganti dengan ID chat Anda
 
     @Override
     public void onReceive(Context context, Intent intent) {
