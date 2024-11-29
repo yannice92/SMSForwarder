@@ -14,8 +14,10 @@ import android.provider.Telephony;
 import android.telephony.SmsMessage;
 import android.util.Log;
 
+import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLEncoder;
 
 public class SmsReceiver extends BroadcastReceiver {
     private static final String PREFS_NAME = "TelegramConfig";
@@ -32,16 +34,19 @@ public class SmsReceiver extends BroadcastReceiver {
                 StringBuilder messageBuilder = new StringBuilder();
                 for (SmsMessage smsMessage : messages) {
                     String smsBody = smsMessage.getMessageBody();
-                    String smsAddress = smsMessage.getDisplayOriginatingAddress();
-                    String senderName = getContactName(context, smsAddress); // Get the sender's name
-                    Log.d("SMS", "From: " + smsAddress + ", Message: " + smsBody);
-                    // Append the SMS body to the message builder
-                    String senderFull = senderName != null ? senderName + " - " + smsAddress : smsAddress;
-
-                    messageBuilder.append("From: ").append(senderFull).append("\n\n");
-                    messageBuilder.append(smsBody).append("\n"); // Add a newline for separation
-                    sendMessageToTelegram(context, messageBuilder.toString().trim());
+                    messageBuilder.append(smsBody); // Combine message parts
                 }
+                String smsAddress = messages[0].getDisplayOriginatingAddress(); // Get the sender from the first message
+                String senderName = getContactName(context, smsAddress); // Get the sender's name
+                // Append the SMS body to the message builder
+                String senderFull = senderName != null ? senderName + " - " + smsAddress : smsAddress;
+                Log.d("SMS", "From: " + smsAddress + ", Message: " + messageBuilder.toString().trim());
+                StringBuilder messageBuilder2 = new StringBuilder();
+                messageBuilder2.append("From: ").append(senderFull).append("\n\n");
+                messageBuilder2.append(messageBuilder.toString().trim()).append("\n"); // Add a newline for separation
+                String combinedMessage = messageBuilder2.toString().trim();
+
+                sendMessageToTelegram(context, combinedMessage);
             }
         } else {
             Log.d("SMSReceiver", "Permission to read SMS not granted.");
@@ -71,9 +76,12 @@ public class SmsReceiver extends BroadcastReceiver {
         String botToken = preferences.getString("bot_token", "");
         String chatId = preferences.getString("chat_id", "");
 
-        String encodedMessage = message.replace("\n", "%0A"); // Replace newlines with URL-encoded newlines
-        String urlString = "https://api.telegram.org/bot" + botToken + "/sendMessage?chat_id=" + chatId + "&text=" + encodedMessage;
-
+        //String encodedMessage = message.replace("\n", "%0A"); // Replace newlines with URL-encoded newlines
+        Log.d("Telegram", "msg: " + message);
+        try {
+            String encodedMessage = URLEncoder.encode(message, "UTF-8"); // URL encode the message
+            String urlString = "https://api.telegram.org/bot" + botToken + "/sendMessage?chat_id=" + chatId + "&text=" + encodedMessage;
+            Log.d("Telegram", urlString);
         new Thread(() -> {
             try {
                 URL url = new URL(urlString);
@@ -91,5 +99,8 @@ public class SmsReceiver extends BroadcastReceiver {
                 e.printStackTrace();
             }
         }).start();
+        } catch (UnsupportedEncodingException e) {
+            Log.e("SmsReceiver", "Error encoding message", e);
+        }
     }
 }
